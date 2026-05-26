@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAP Experience - Hue Imperial City</title>
+  
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+
+    /* 1. MÀN HÌNH KHỞI ĐẦU (Gộp quyền Cam & Audio) */
+    #ui-container {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #000; z-index: 10001;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+
+    /* 2. LỚP PHỦ KẾT THÚC (Modern Glassmorphism) */
+    #end-overlay {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6); 
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: none; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 10000; transition: all 0.5s ease;
+    }
+
+    /* Style cho các nút bấm */
+    .btn {
+      padding: 16px 32px; margin: 12px; font-size: 16px; font-weight: bold;
+      border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase;
+      transition: transform 0.2s;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #start-btn { background: #ff3b30; color: white; box-shadow: 0 4px 15px rgba(255,59,48,0.4); }
+    #continue-btn { background: #ffffff; color: #000; }
+    #back-btn { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255,255,255,0.3); }
+    
+    .instruction { color: #888; font-size: 13px; margin-top: 15px; text-align: center; padding: 0 20px; }
+  </style>
+</head>
+
+<body>
+
+  <div id="ui-container">
+    <button id="start-btn" class="btn">CHẠM ĐỂ KHÁM PHÁ AR</button>
+    <p class="instruction">Vui lòng cho phép truy cập Camera để xem trải nghiệm</p>
+  </div>
+
+  <div id="end-overlay">
+    <h2 style="color: white; margin-bottom: 20px;">Bạn muốn làm gì tiếp theo?</h2>
+    <button id="continue-btn" class="btn">Tiếp tục trải nghiệm</button>
+    <button id="back-btn" class="btn">Quay lại trang chủ</button>
+  </div>
+
+  <a-scene 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 100; warmupSteps: 10;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+  >
+
+    <a-assets>
+      <video id="video" crossorigin="anonymous" src="./video.mp4" playsinline webkit-playsinline></video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <a-video src="#video" width="1.02" height="0.612" position="0 0 0"></a-video>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const sceneEl = document.querySelector('a-scene');
+      const video = document.querySelector('#video');
+      const uiContainer = document.querySelector('#ui-container');
+      const endOverlay = document.querySelector('#end-overlay');
+      const target = document.querySelector('#target');
+      
+      let playCount = 0;
+
+      // 1. CLICK GỘP: Kích hoạt Camera + Mở khóa Audio
+      document.querySelector('#start-btn').addEventListener('click', () => {
+        // Khởi động hệ thống MindAR (Hiện popup camera)
+        sceneEl.systems["mindar-image-system"].start();
+        
+        // Mở khóa audio bằng cách play/pause ngay lập tức
+        video.play().then(() => {
+          video.pause();
+        }).catch(e => console.log("Audio auto-play blocked", e));
+        
+        uiContainer.style.display = 'none';
+      });
+
+      // 2. LOGIC PHÁT VIDEO KHI QUÉT TRÚNG
+      target.addEventListener("targetFound", () => {
+        video.play();
+      });
+
+      target.addEventListener("targetLost", () => {
+        video.pause();
+      });
+
+      // 3. LOGIC KẾT THÚC & HIỆU ỨNG MỜ
+      video.addEventListener('ended', () => {
+        playCount++;
+        
+        if (playCount < 2) {
+          video.play(); // Tự động phát lại lần 2
+        } else {
+          // HIỆU ỨNG SAU LẦN 2
+          video.volume = 0.5; // Giảm âm lượng 50%
+          video.loop = true;  // Cho phép lặp mãi mãi từ đây
+          video.play();
+          
+          endOverlay.style.display = 'flex'; // Hiện lớp phủ mờ đen
+        }
+      });
+
+      // 4. ĐIỀU HƯỚNG NÚT BẤM
+      document.querySelector('#continue-btn').addEventListener('click', () => {
+        endOverlay.style.display = 'none';
+        video.volume = 1.0;
+        video.loop = false;
+        playCount = 1; // Reset nhẹ để nếu xem hết lần này nữa popup lại hiện
+      });
+
+      document.querySelector('#back-btn').addEventListener('click', () => {
+        // Thay link này bằng Landing Page của bạn
+        window.location.href = "https://your-landing-page.com";
+      });
+    });
+  </script>
+</body>
+</html>
